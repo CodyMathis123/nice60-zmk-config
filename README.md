@@ -1,3 +1,7 @@
+> **Moved to [CodyMathis123/miryoku_zmk](https://github.com/CodyMathis123/miryoku_zmk).** The active nice!60 custom ZMK firmware and read-only keymap viewer now live in the [consolidated repository](https://github.com/CodyMathis123/miryoku_zmk), alongside the other keyboards. Use its [firmware workflow](https://github.com/CodyMathis123/miryoku_zmk/actions/workflows/firmware-nice60.yml) and consolidated viewer. This repository is retained as a historical, working reference; its firmware and Pages output may be outdated.
+
+---
+
 # nice!60 ZMK configuration
 
 Firmware and a **read-only, interactive keymap explorer** for the nice!60 keyboard.
