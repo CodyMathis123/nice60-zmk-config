@@ -87,11 +87,13 @@ export function effectiveBinding(keymap, selectedLayer, keyIndex) {
   if (!keymap.layers[selectedLayer] || keyIndex < 0 || keyIndex >= keymap.keyCount) {
     throw new RangeError("Invalid layer or key index");
   }
-  for (let i = selectedLayer; i >= 0; i -= 1) {
-    const binding = keymap.layers[i].bindings[keyIndex];
-    if (binding !== "&trans") {
-      return { binding, sourceLayer: i, inherited: i !== selectedLayer };
-    }
+  const binding = keymap.layers[selectedLayer].bindings[keyIndex];
+  if (binding !== "&trans") return { binding, sourceLayer: selectedLayer, inherited: false };
+  // Only the selected layer and base are assumed active in this preview.
+  // Intermediate layer numbers are not necessarily active in ZMK.
+  const base = keymap.layers[0].bindings[keyIndex];
+  if (selectedLayer > 0 && base !== "&trans") {
+    return { binding: base, sourceLayer: 0, inherited: true };
   }
-  return { binding: "&trans", sourceLayer: null, inherited: selectedLayer !== 0 };
+  return { binding: "&trans", sourceLayer: null, inherited: false };
 }
