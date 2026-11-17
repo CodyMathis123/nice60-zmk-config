@@ -93,6 +93,7 @@ function describe(binding, model) {
 let model;
 let activeLayer = 0;
 let selectedKey = null;
+let inspectedBinding = null;
 function node(tag, cls, text) {
   const element = document.createElement(tag);
   if (cls) element.className = cls;
@@ -109,7 +110,7 @@ function renderDetails() {
     description.textContent = "Click a key to inspect its ZMK behavior. Layer controls also take you to the destination layer.";
     return;
   }
-  const result = effectiveBinding(model, activeLayer, selectedKey);
+  const result = inspectedBinding || effectiveBinding(model, activeLayer, selectedKey);
   const display = describe(result.binding, model);
   title.textContent = display.main;
   description.textContent = display.detail +
@@ -124,7 +125,7 @@ function render() {
     const tab = node("button", "tab", layer.name);
     tab.type = "button";
     tab.setAttribute("aria-pressed", String(activeLayer === index));
-    tab.addEventListener("click", () => { activeLayer = index; selectedKey = null; render(); });
+    tab.addEventListener("click", () => { activeLayer = index; selectedKey = null; inspectedBinding = null; render(); });
     tabs.appendChild(tab);
   });
   const keyboard = $("keyboard");
@@ -155,6 +156,7 @@ function render() {
       if (original === "&trans") key.dataset.inherited = "true";
       key.addEventListener("click", () => {
         selectedKey = index;
+        inspectedBinding = result;
         if (display.target !== null) activeLayer = display.target;
         render();
       });
