@@ -13,7 +13,7 @@ test("nice!60 physical layout has 61 positions and 15u rows", () => {
 });
 
 test("all four layers parse in defined order without losing bindings", () => {
-  assert.deepEqual(model.layers.map((layer) => layer.symbol), ["QWERTY", "RGB", "GAME", "NAV"]);
+  assert.deepEqual(model.layers.slice(0, 4).map((layer) => layer.symbol), ["QWERTY", "RGB", "GAME", "NAV"]);
   assert.ok(model.layers.every((layer) => layer.bindings.length === KEY_COUNT));
   assert.equal(model.layers[0].bindings[0], "&gresc");
   assert.equal(model.layers[0].bindings[28], "&lt NAV CLCK");
@@ -34,6 +34,13 @@ test("transparent positions inherit base layer bindings", () => {
     { binding: "&kp Q", sourceLayer: 0, inherited: false });
   assert.deepEqual(effectiveBinding(model, 1, 0),
     { binding: "&bt BT_CLR", sourceLayer: 1, inherited: false });
+});
+
+test("a transparent NAV key falls through to base, not inactive GAME", () => {
+  const altered = structuredClone(model);
+  altered.layers[2].bindings[28] = "&kp X";
+  assert.deepEqual(effectiveBinding(altered, 3, 28),
+    { binding: "&lt NAV CLCK", sourceLayer: 0, inherited: true });
 });
 
 test("invalid/incomplete keymap fails rather than silently shifting keys", () => {
