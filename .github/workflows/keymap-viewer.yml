@@ -1,20 +1,13 @@
-name: Keymap viewer
-
+name: Redirect legacy keymap viewer to unified explorer
 on:
   push:
     branches: [main]
     paths:
-      - "config/**"
-      - "docs/**"
-      - "scripts/build-viewer.mjs"
-      - "tests/**"
+      - "legacy-pages/**"
       - ".github/workflows/keymap-viewer.yml"
   pull_request:
     paths:
-      - "config/**"
-      - "docs/**"
-      - "scripts/build-viewer.mjs"
-      - "tests/**"
+      - "legacy-pages/**"
       - ".github/workflows/keymap-viewer.yml"
   workflow_dispatch:
 
@@ -23,31 +16,20 @@ permissions:
 
 jobs:
   validate:
-    name: Validate and package viewer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Test ZMK keymap parser
-        run: node --test tests/keymap-model.test.mjs
-      - name: Check browser JavaScript syntax
+      - name: Verify redirect points to canonical nice!60 viewer
         run: |
-          node --check docs/app.mjs
-          node --check docs/layout-model.mjs
-      - name: Build static viewer
-        run: node scripts/build-viewer.mjs
-      - name: Attach downloadable preview
-        uses: actions/upload-artifact@v4
-        with:
-          name: keymap-viewer-preview
-          path: _site/
-          include-hidden-files: true
-          retention-days: 30
+          test -s legacy-pages/index.html
+          grep -Fq 'https://codymathis123.github.io/miryoku_zmk/#nice60' legacy-pages/index.html
+          if grep -Eq '(keymap-model|app\.mjs|keymap\.keymap)' legacy-pages/index.html; then
+            echo "Legacy viewer must only redirect to the canonical UI" >&2
+            exit 1
+          fi
 
   deploy:
-    name: Publish GitHub Pages
+    name: Publish redirect
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
@@ -59,23 +41,14 @@ jobs:
       name: github-pages
       url: ${{ steps.publish.outputs.page_url }}
     concurrency:
-      group: github-pages
+      group: legacy-keymap-pages
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
         with:
-          node-version: "22"
-      - name: Prepare static site
-        run: node scripts/build-viewer.mjs
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: _site/
+          path: legacy-pages/
       - name: Publish
         id: publish
         uses: actions/deploy-pages@v4
