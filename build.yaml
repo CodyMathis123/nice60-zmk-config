@@ -1,2 +1,3 @@
 include:
-  - board: nice60
+  - board: nice60//zmk
+    artifact-name: nice60-zmk
