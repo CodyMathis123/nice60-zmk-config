@@ -1,0 +1,9 @@
+{
+  "name": "nice!60",
+  "description": "Inspect your 61-key ANSI keymap, switch layers, and follow hold and tap behaviors. Read-only and generated from your firmware configuration.",
+  "repository": "CodyMathis123/nice60-zmk-config",
+  "keymap": "config/nice60.keymap",
+  "layout": "config/nice60-layout.json",
+  "layoutName": "default_transform",
+  "firmwareWorkflow": "build.yml"
+}

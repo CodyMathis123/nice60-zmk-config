@@ -4,14 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "config/nice60.keymap"
+      - "config/**"
       - "docs/**"
       - "scripts/build-viewer.mjs"
       - "tests/**"
       - ".github/workflows/keymap-viewer.yml"
   pull_request:
     paths:
-      - "config/nice60.keymap"
+      - "config/**"
       - "docs/**"
       - "scripts/build-viewer.mjs"
       - "tests/**"
@@ -32,6 +32,10 @@ jobs:
           node-version: "22"
       - name: Test ZMK keymap parser
         run: node --test tests/keymap-model.test.mjs
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check docs/app.mjs
+          node --check docs/layout-model.mjs
       - name: Build static viewer
         run: node scripts/build-viewer.mjs
       - name: Attach downloadable preview

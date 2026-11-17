@@ -1,14 +1,5 @@
 // A deliberately read-only parser for the ZMK keymap used by this repository.
 // It does not preprocess C, compile firmware, or modify the source.
-export const ROW_WIDTHS = [
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
-  [1.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5],
-  [1.75, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2.25],
-  [2.25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2.75],
-  [1.25, 1.25, 1.25, 6.25, 1.25, 1.25, 1.25, 1.25],
-];
-export const KEY_COUNT = ROW_WIDTHS.reduce((sum, row) => sum + row.length, 0);
-
 function stripComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\r\n]*/g, "");
 }
@@ -23,7 +14,7 @@ function blockAt(source, open) {
   throw new Error("Unclosed keymap block");
 }
 
-function extractBindings(body, name) {
+function extractBindings(body, name, keyCount) {
   const match = /\bbindings\s*=\s*<([\s\S]*?)>\s*;/.exec(body);
   if (!match) throw new Error("Missing bindings in " + name);
   const data = match[1];
@@ -32,13 +23,14 @@ function extractBindings(body, name) {
   const bindings = starts.map((start, i) =>
     data.slice(start, i + 1 < starts.length ? starts[i + 1] : data.length).trim()
   );
-  if (bindings.length !== KEY_COUNT) {
-    throw new Error(name + ": expected " + KEY_COUNT + " bindings, found " + bindings.length);
+  if (bindings.length !== keyCount) {
+    throw new Error(name + ": expected " + keyCount + " bindings, found " + bindings.length);
   }
   return bindings;
 }
 
-export function parseKeymap(source) {
+export function parseKeymap(source, { keyCount } = {}) {
+  if (!Number.isInteger(keyCount) || keyCount < 1 || keyCount > 300) throw new RangeError("Invalid expected key count");
   if (typeof source !== "string") throw new TypeError("Keymap source must be text");
   const macros = new Map([...source.matchAll(/^\s*#define\s+([A-Za-z_]\w*)\s+(\d+)\b/gm)]
     .map((m) => [m[1], Number(m[2])]));
@@ -63,7 +55,7 @@ export function parseKeymap(source) {
       node,
       symbol,
       name: display ? display[1] : symbol,
-      bindings: extractBindings(block.body, node),
+      bindings: extractBindings(block.body, node, keyCount),
     });
   }
   if (!layers.length) throw new Error("No keymap layers found");
@@ -72,7 +64,20 @@ export function parseKeymap(source) {
       throw new Error("Layer index mismatch for " + layer.symbol);
     }
   }
-  return { layers, macros: Object.fromEntries(macros), keyCount: KEY_COUNT };
+  const customBehaviors = {};
+  const definitions = /([A-Za-z_]\w*)\s*:\s*[A-Za-z_]\w*\s*\{([^{}]*?)\};/g;
+  let definition;
+  while ((definition = definitions.exec(cleaned)) !== null) {
+    const compatible = /compatible\s*=\s*"zmk,behavior-(mod-morph|tap-dance)"/.exec(definition[2]);
+    const actions = /bindings\s*=\s*<([^>]+)>\s*,\s*<([^>]+)>/.exec(definition[2]);
+    if (compatible && actions) {
+      customBehaviors[definition[1]] = {
+        type: compatible[1],
+        actions: [actions[1].trim(), actions[2].trim()],
+      };
+    }
+  }
+  return { layers, macros: Object.fromEntries(macros), keyCount, customBehaviors };
 }
 
 export function layerTarget(binding, keymap) {

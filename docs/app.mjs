@@ -1,10 +1,16 @@
-import { parseKeymap, ROW_WIDTHS, effectiveBinding, layerTarget } from "./keymap-model.mjs";
+import { parseKeymap, effectiveBinding, layerTarget } from "./keymap-model.mjs";
+import { layoutPositions, layoutGeometry } from "./layout-model.mjs";
 
 const $ = (id) => document.getElementById(id);
 const keyAliases = {
   BSPC: "Backspace", RET: "Enter", TAB: "Tab", CLCK: "Caps Lock", ESC: "Esc",
   MINUS: "-", EQUAL: "=", LBKT: "[", RBKT: "]", BSLH: "\\", SEMI: ";",
-  SQT: "'", FSLH: "/", COMMA: ",", DOT: ".", SPACE: "Space", DEL: "Delete",
+  SQT: "'", SINGLE_QUOTE: "'", FSLH: "/", COMMA: ",", DOT: ".", SPACE: "Space", DEL: "Delete",
+  LEFT_ALT: "Alt", RIGHT_ALT: "Alt", LEFT_PARENTHESIS: "(", RIGHT_PARENTHESIS: ")",
+  LEFT_BRACE: "{", RIGHT_BRACE: "}", LEFT_BRACKET: "[", RIGHT_BRACKET: "]",
+  BACKSLASH: "\\", GRAVE: "`", EXCL: "!", AT: "@", HASH: "#",
+  DOLLAR: "$", PERCENT: "%", CARET: "^", AMPS: "&", STAR: "*",
+  C_VOL_UP: "Volume +", C_VOL_DN: "Volume −",
   LSHFT: "Shift", RSHFT: "Shift", LCTRL: "Ctrl", RCTRL: "Ctrl",
   LGUI: "Win", RGUI: "Win", LALT: "Alt", RALT: "Alt",
   LEFT: "Left", RIGHT: "Right", UP: "Up", DOWN: "Down",
@@ -83,6 +89,19 @@ function describe(binding, model) {
       parts[1] === "BT_SEL" ? "BT " + (Number(parts[2]) + 1) : "Bluetooth";
     return { main: label, sub: "Bluetooth", detail: action + ".", kind: "special", target };
   }
+  const custom = model.customBehaviors?.[behavior.slice(1)];
+  if (custom) {
+    const first = custom.actions[0].replace(/^&kp\s+/, "");
+    const second = custom.actions[1].replace(/^&kp\s+/, "");
+    const firstName = nameOf(first);
+    const secondName = nameOf(second);
+    const kind = custom.type === "mod-morph" ? "Modifier morph" : "Tap dance";
+    const detail = custom.type === "mod-morph"
+      ? "Normally " + firstName + "; with the configured modifier, " + secondName + "."
+      : "Tap once for " + firstName + "; tap twice for " + secondName + ".";
+    return { main: shortened(firstName), sub: kind,
+      detail: kind + ": " + detail, kind: "special", target };
+  }
   if (behavior === "&none") return { main: "Disabled", sub: "", detail: "No key action.", kind: "normal", target };
   if (behavior === "&trans") return { main: "Transparent", sub: "", detail: "No lower layer supplies a binding.", kind: "normal", target };
   return { main: behavior.replace(/^&/, ""), sub: parts.slice(1).join(" "),
@@ -94,6 +113,7 @@ let model;
 let activeLayer = 0;
 let selectedKey = null;
 let inspectedBinding = null;
+let geometry;
 function node(tag, cls, text) {
   const element = document.createElement(tag);
   if (cls) element.className = cls;
@@ -130,50 +150,67 @@ function render() {
   });
   const keyboard = $("keyboard");
   keyboard.replaceChildren();
-  let offset = 0;
-  ROW_WIDTHS.forEach((widths, rowIndex) => {
-    const row = node("div", "keyrow");
-    row.setAttribute("aria-label", "Keyboard row " + (rowIndex + 1));
-    widths.forEach((width, colIndex) => {
-      const index = offset + colIndex;
-      const result = effectiveBinding(model, activeLayer, index);
-      const display = describe(result.binding, model);
-      const original = model.layers[activeLayer].bindings[index];
-      const key = node("button", "key");
-      key.type = "button";
-      key.style.flex = String(width) + " 1 0%";
-      if (result.inherited) key.classList.add("inherited");
-      if (display.kind === "layer") key.classList.add("layer-key");
-      if (display.kind === "special") key.classList.add("special-key");
-      if (selectedKey === index) key.classList.add("selected");
-      key.appendChild(node("span", "key-main", display.main));
-      if (display.sub || result.inherited) {
-        key.appendChild(node("span", "key-sub", result.inherited ? "↳ " + model.layers[result.sourceLayer].name : display.sub));
-      }
-      key.title = result.binding + (result.inherited ? " (inherited)" : "");
-      key.setAttribute("aria-label", "Row " + (rowIndex + 1) + ", key " + (colIndex + 1) +
-        ": " + display.main + ". " + display.detail);
-      if (original === "&trans") key.dataset.inherited = "true";
-      key.addEventListener("click", () => {
-        selectedKey = index;
-        inspectedBinding = result;
-        if (display.target !== null) activeLayer = display.target;
-        render();
-      });
-      row.appendChild(key);
+  keyboard.style.position = "relative";
+  keyboard.style.width = geometry.width + "px";
+  keyboard.style.minWidth = geometry.width + "px";
+  keyboard.style.height = geometry.height + "px";
+  geometry.keys.forEach((position, index) => {
+    const result = effectiveBinding(model, activeLayer, index);
+    const display = describe(result.binding, model);
+    const key = node("button", "key");
+    key.type = "button";
+    key.style.position = "absolute";
+    key.style.left = position.left + "px";
+    key.style.top = position.top + "px";
+    key.style.width = position.width - 4 + "px";
+    key.style.height = position.height - 4 + "px";
+    key.style.transform = "rotate(" + position.r + "deg)";
+    key.style.transformOrigin = "center center";
+    if (result.inherited) key.classList.add("inherited");
+    if (result.binding === "&none") key.classList.add("unused-key");
+    if (display.kind === "layer") key.classList.add("layer-key");
+    if (display.kind === "special") key.classList.add("special-key");
+    if (selectedKey === index) key.classList.add("selected");
+    key.appendChild(node("span", "key-main", display.main));
+    if (display.sub || result.inherited) {
+      key.appendChild(node("span", "key-sub", result.inherited ? "↳ " + model.layers[result.sourceLayer].name : display.sub));
+    }
+    key.title = result.binding + (result.inherited ? " (inherited)" : "");
+    key.setAttribute("aria-label", "Row " + (position.row + 1) +
+      ", column " + (position.col + 1) + ": " + display.main + ". " + display.detail);
+    key.addEventListener("click", () => {
+      selectedKey = index;
+      inspectedBinding = result;
+      if (display.target !== null) activeLayer = display.target;
+      render();
     });
-    offset += widths.length;
-    keyboard.appendChild(row);
+    keyboard.appendChild(key);
   });
   renderDetails();
 }
 
 async function load() {
   try {
-    const response = await fetch("./nice60.keymap", { cache: "no-cache" });
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    model = parseKeymap(await response.text());
-    if (model.keyCount !== 61) throw new Error("Unexpected key count");
+    const [settingsResponse, keymapResponse, layoutResponse] = await Promise.all([
+      fetch("./viewer-config.json"),
+      fetch("./keymap.keymap", { cache: "no-cache" }),
+      fetch("./layout.json"),
+    ]);
+    if (![settingsResponse, keymapResponse, layoutResponse].every(response => response.ok)) {
+      throw new Error("Unable to read generated configuration, keymap or physical layout");
+    }
+    const settings = await settingsResponse.json();
+    const layout = await layoutResponse.json();
+    const positions = layoutPositions(layout, settings.layoutName);
+    geometry = layoutGeometry(positions);
+    model = parseKeymap(await keymapResponse.text(), { keyCount: positions.length });
+    document.title = settings.name + " · Keymap Explorer";
+    $("site-title").textContent = settings.name + " keymap explorer";
+    $("site-description").textContent = settings.description;
+    $("key-count").textContent = positions.length + " keys · physical layout";
+    const repoBase = "https://github.com/" + settings.repository;
+    $("source-link").href = repoBase + "/blob/main/" + settings.keymap;
+    $("firmware-link").href = repoBase + "/actions/workflows/" + (settings.firmwareWorkflow || "build.yml");
     $("status").hidden = true;
     $("viewer").hidden = false;
     render();

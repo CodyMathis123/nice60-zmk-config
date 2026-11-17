@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101723">
-  <title>nice!60 · Keymap Explorer</title>
+  <title>ZMK · Keymap Explorer</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
       background: #0c111b; color: #e9edf5; font-synthesis: none; }
@@ -34,13 +34,17 @@
     .keyboard { min-width: 760px; padding: 16px; border: 2px solid #40516a; border-radius: 15px; background: linear-gradient(160deg, #253348, #1b2739); box-shadow: inset 0 2px 8px #0006, 0 10px 32px #0004; }
     .keyrow { display: flex; gap: 6px; margin-bottom: 6px; }
     .keyrow:last-child { margin-bottom: 0; }
-    .key { height: 68px; min-width: 0; overflow: hidden; border: 1px solid #4e637e; border-bottom: 3px solid #33455e; color: #f4f7fd; border-radius: 7px; background: linear-gradient(145deg, #35455e, #2a3951); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px 2px; transition: border-color .12s, background .12s, transform .12s; }
-    .key:hover { border-color: #aacff0; background: #435b7b; transform: translateY(-1px); }
+    .key { min-width: 0; overflow: hidden; border: 1px solid #4e637e; border-bottom: 3px solid #33455e; color: #f4f7fd; border-radius: 7px; background: linear-gradient(145deg, #35455e, #2a3951); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 4px 2px; transition: border-color .12s, background .12s, transform .12s; }
+    .key:hover { border-color: #aacff0; background: #435b7b; box-shadow: 0 0 0 1px #a3c8ee; }
     .key:focus-visible, .tab:focus-visible { outline: 3px solid #95d1ff; outline-offset: 2px; }
     .key.selected { border-color: #a2d8ff; background: #365f82; box-shadow: 0 0 0 1px #addcff; }
     .key.layer-key { background: linear-gradient(145deg, #2e6474, #285365); border-color: #5ba4b7; }
     .key.special-key { background: linear-gradient(145deg, #584768, #453854); border-color: #806e9a; }
     .key.inherited { opacity: .7; border-style: dashed; }
+    .key.unused-key { opacity: .45; }
+    .keyboard { overflow: visible; flex: none; }
+    .key .key-main { font-size: 11px; }
+    .key .key-sub { font-size: 8px; }
     .key-main { font-size: 12px; font-weight: 800; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
     .key-sub { font-size: 9px; color: #d7e8f9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .below { display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, .8fr); gap: 16px; margin-top: 16px; }
@@ -63,12 +67,12 @@
     <header class="top">
       <div>
         <div class="eyebrow">Read-only · ZMK firmware</div>
-        <h1>nice!60 keymap explorer</h1>
-        <p class="lead">Explore each layer, see inherited keys, and click layer switches to follow the layout. Generated from the actual firmware keymap; nothing here can change it.</p>
+        <h1 id="site-title">Keymap explorer</h1>
+        <p class="lead" id="site-description">Explore your keymap, browse its layers, and inspect the original firmware bindings. Read-only by design.</p>
       </div>
       <nav class="links" aria-label="Repository links">
-        <a href="https://github.com/CodyMathis123/nice60-zmk-config/blob/main/config/nice60.keymap" target="_blank" rel="noopener noreferrer">View source</a>
-        <a href="https://github.com/CodyMathis123/nice60-zmk-config/actions/workflows/build.yml" target="_blank" rel="noopener noreferrer">Firmware builds</a>
+        <a id="source-link" href="#" target="_blank" rel="noopener noreferrer">View source</a>
+        <a id="firmware-link" href="#" target="_blank" rel="noopener noreferrer">Firmware builds</a>
       </nav>
     </header>
     <div id="status" class="status" role="status">Loading keymap…</div>
@@ -78,7 +82,7 @@
           <div class="section-label">Active layer (preview)</div>
           <div id="layer-tabs" class="tabs" aria-label="Select layer"></div>
         </div>
-        <div class="summary"><strong id="active-name"></strong><div>61 keys · 60% ANSI layout</div><div>Click colored layer keys to navigate</div></div>
+        <div class="summary"><strong id="active-name"></strong><div id="key-count">Physical layout</div><div>Click colored layer keys to navigate</div></div>
       </section>
       <div class="panel board-frame"><div id="keyboard" class="keyboard" aria-label="Keyboard bindings"></div></div>
       <div class="legend" aria-label="Legend">
@@ -98,10 +102,10 @@
           <div class="section-label">Reading the keymap</div>
           <h2>Tap, hold, or switch</h2>
           <p><strong>LT</strong> keys tap one keycode and activate a layer while held. <strong>MO</strong> activates a layer while held; <strong>TO</strong> switches the active layer.</p>
-          <p>Transparent bindings show the key inherited from the base layer. The preview models the selected layer over QWERTY, not multiple simultaneously held layers.</p>
+          <p>Transparent bindings show the key inherited from the base layer. The preview models the selected layer over the default layer, not multiple simultaneously held layers.</p>
         </section>
       </div>
-      <footer class="foot">This viewer never writes to GitHub or the keyboard. Firmware must be built and flashed separately. Key positions follow the repository's ANSI-style nice!60 layout.</footer>
+      <footer class="foot">This viewer never writes to GitHub or the keyboard. Firmware must be built and flashed separately. Key positions follow the keyboard's physical layout configuration.</footer>
     </section>
   </main>
   <script type="module" src="./app.mjs"></script>
